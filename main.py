@@ -1,5 +1,6 @@
 import glob
 import nltk
+import os
 import string
 
 class Sample(object):
@@ -64,8 +65,11 @@ def normalize_text(doc):
 
 
 if __name__ == '__main__':
-    # only need to run the following line once
-    # nltk.download()
+    # download necessary nltk packages
+    # venv_dir = os.getcwd() + '/venv/nltk_data/'
+    # nltk_data = ['stopwords', 'punkt']
+    # nltk.download(nltk_data, download_dir = venv_dir)
+
     data_path = '../C99/data/'
     docs = read_docs(data_path)
     for t in docs:
