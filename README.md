@@ -18,6 +18,11 @@ length of the text (in terms of tokens). I chose to discard the rest of the text
 for the sake of simplicity. I believe that these last few tokens will not affect
 the algorithm's outcome significantly.
 
+The second is the similar question, except for blocks. Should I calculate a
+similarity score for every _pseudosentence gap_, as Hearst calls it? I chose not
+to. I only calculate the similarity scores for those gaps where the entire block
+_fits_ on the list of pseudosentences.
+
 ## Modification: ELMo
 
 Hearst uses a similarity score to that is essentially bag of words with cosine

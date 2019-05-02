@@ -1,4 +1,6 @@
+import collections
 import glob
+import math
 import nltk
 import os
 import string
@@ -37,8 +39,8 @@ class TextTiler(object):
 
         ### Break up text into Pseudosentences
         # this list maps pseudosentence index to beginning token index
-        psidx = list(range(0, len(normed_text), self.w))
-        pseudosents = [normed_text[i:i + self.w] for i in psidx]
+        tidx = list(range(0, len(normed_text), self.w))
+        pseudosents = [normed_text[i:i + self.w] for i in tidx]
 
         # discard pseudosents of length < self.w
         # also, record the waste for fun
@@ -47,6 +49,23 @@ class TextTiler(object):
             waste += len(pseudosents[-1])
             print(f'Waste so far: {waste} tokens')
             del pseudosents[-1]
+
+        ### Group into blocks and calculate sim scores
+        sims = []
+        i = 0
+        while i + 2 * self.k < len(pseudosents):
+            mid = i + self.k
+            end = i + 2 * self.k
+            block_a = pseudosents[i:mid]
+            block_b = pseudosents[mid:end]
+
+            a = [token for ps in block_a for token in ps]
+            b = [token for ps in block_b for token in ps]
+            bow_a = collections.Counter(a)
+            bow_b = collections.Counter(b)
+
+            sims.append(self.sim(bow_a, bow_b))
+            i += 1
         exit()
 
     def normalize_text(self, segment):
@@ -64,6 +83,16 @@ class TextTiler(object):
         words = [w for w in stems if w not in sw]
         return words
 
+    def sim(self, a, b):
+        union = a | b
+        prod = [a[tok] * b[tok] for tok in union]
+        numerator = sum(prod)
+
+        sqsum_a = sum([a[tok]**2 for tok in a])
+        sqsum_b = sum([b[tok]**2 for tok in b])
+        denominator = math.sqrt(sqsum_a * sqsum_b)
+
+        return numerator/denominator
 
 def read_samples(path):
     '''
