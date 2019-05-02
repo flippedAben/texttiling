@@ -3,6 +3,7 @@ import nltk
 import os
 import string
 
+# A single sample from the Choi 2000 data
 class Sample(object):
     def __init__(self):
         self.segments = []
@@ -17,7 +18,57 @@ class Sample(object):
         return ' '.join(self.segments)
 
 
-def read_docs(path):
+# TextTiling algorithm with modifications (not including ELMo)
+class TextTiler(object):
+    def __init__(self, w, k):
+        self.w = w
+        self.k = k
+
+    def tile_text(self, sample):
+        ### Record paragraph break points
+        # this list maps segment index to beginning token index
+        pbreaks = [0]
+        normed_text = []
+        for seg in sample.get_segments():
+            normed_seg = self.normalize_text(seg)
+            normed_text += normed_seg
+            pbreaks.append(len(normed_seg) + pbreaks[-1])
+        del pbreaks[-1]
+
+        ### Break up text into Pseudosentences
+        # this list maps pseudosentence index to beginning token index
+        psidx = list(range(0, len(normed_text), self.w))
+        pseudosents = [normed_text[i:i + self.w] for i in psidx]
+
+        # discard pseudosents of length < self.w
+        # also, record the waste for fun
+        waste = 0
+        if len(pseudosents[-1]) < self.w:
+            waste += len(pseudosents[-1])
+            print(f'Waste so far: {waste} tokens')
+            del pseudosents[-1]
+        exit()
+
+    def normalize_text(self, segment):
+        tokens = nltk.tokenize.word_tokenize(segment)
+        tokens = [t.lower() for t in tokens]
+        no_punct = str.maketrans('', '', string.punctuation)
+        tokens = [t.translate(no_punct) for t in tokens]
+        tokens = [t for t in tokens if t.isalpha()]
+
+        ps = nltk.stem.porter.PorterStemmer()
+        stems = [ps.stem(w) for w in tokens]
+
+        sw = nltk.corpus.stopwords.words('english')
+        sw = set(sw)
+        words = [w for w in stems if w not in sw]
+        return words
+
+
+def read_samples(path):
+    '''
+    Returns a dictionary: types -> List[Sample]
+    '''
     # since I don't expect the data repo to change soon (the last commit was in
     # 2016), I will hardcode in the file names:
     #   1, 2, 3, and 4; 3-11, 3-5, 6-8, and 9-11
@@ -30,38 +81,22 @@ def read_docs(path):
     data = {}
     for t in types:
         for p in paths[t]:
-            doc = Sample()
+            sample = Sample()
             with open(p, 'r') as f:
                 para = []
                 for line in f.readlines():
                     line = line.strip()
                     if line == '==========':
                         if para:
-                            doc.add_segment(' '.join(para))
+                            sample.add_segment(' '.join(para))
                         para = []
                     else:
                         para.append(line)
             if t in data:
-                data[t].append(doc)
+                data[t].append(sample)
             else:
-                data[t] = [doc]
+                data[t] = [sample]
     return data
-
-
-def normalize_text(doc):
-    tokens = nltk.tokenize.word_tokenize(doc)
-    tokens = [t.lower() for t in tokens]
-    no_punct = str.maketrans('', '', string.punctuation)
-    tokens = [t.translate(no_punct) for t in tokens]
-    tokens = [t for t in tokens if t.isalpha()]
-
-    ps = nltk.stem.porter.PorterStemmer()
-    stems = [ps.stem(w) for w in tokens]
-
-    sw = nltk.corpus.stopwords.words('english')
-    sw = set(sw)
-    words = [w for w in stems if w not in sw]
-    return words
 
 
 if __name__ == '__main__':
@@ -71,10 +106,10 @@ if __name__ == '__main__':
     # nltk.download(nltk_data, download_dir = venv_dir)
 
     data_path = '../C99/data/'
-    docs = read_docs(data_path)
-    for t in docs:
-        for sample in docs[t]:
-            clean_paras = []
-            for para in sample.get_segments():
-                clean_paras.append(normalize_text(para))
+    samples = read_samples(data_path)
+    tt = TextTiler(20, 6)
+    for t in samples:
+        for s in samples[t]:
+            tiled = tt.tile_text(s)
+            print(tiled)
             exit()

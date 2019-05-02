@@ -11,6 +11,13 @@ Reynar did some experimentation and found out that using depth scores was not
 as accurate as using the minimum similarity scores on their test corpus (Reynar
 1998). This version of TextTiling will use some of the discoveries from Reynar.
 
+### Design Decisions
+
+The first question is what if the pseudosentence length does not divide the
+length of the text (in terms of tokens). I chose to discard the rest of the text
+for the sake of simplicity. I believe that these last few tokens will not affect
+the algorithm's outcome significantly.
+
 ## Modification: ELMo
 
 Hearst uses a similarity score to that is essentially bag of words with cosine
