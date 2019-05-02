@@ -1,6 +1,6 @@
 import glob
-import spacy
-from spacy.lang.en import English
+import nltk
+import string
 
 class Sample(object):
     def __init__(self):
@@ -9,11 +9,12 @@ class Sample(object):
     def add_segment(self, p):
         self.segments.append(p)
 
-    def get_first(self):
-        return self.segments[0]
+    def get_segments(self):
+        return self.segments
 
     def get_all(self):
         return ' '.join(self.segments)
+
 
 def read_docs(path):
     # since I don't expect the data repo to change soon (the last commit was in
@@ -46,16 +47,30 @@ def read_docs(path):
     return data
 
 
-def tokenize(doc):
-    nlp = English()
-    tokenizer = English().Defaults.create_tokenizer(nlp)
+def normalize_text(doc):
+    tokens = nltk.tokenize.word_tokenize(doc)
+    tokens = [t.lower() for t in tokens]
+    no_punct = str.maketrans('', '', string.punctuation)
+    tokens = [t.translate(no_punct) for t in tokens]
+    tokens = [t for t in tokens if t.isalpha()]
 
-    print(tokenizer(doc))
+    ps = nltk.stem.porter.PorterStemmer()
+    stems = [ps.stem(w) for w in tokens]
+
+    sw = nltk.corpus.stopwords.words('english')
+    sw = set(sw)
+    words = [w for w in stems if w not in sw]
+    return words
+
 
 if __name__ == '__main__':
+    # only need to run the following line once
+    # nltk.download()
     data_path = '../C99/data/'
     docs = read_docs(data_path)
     for t in docs:
-        for d in docs[t]:
-            tokenize(d.get_first())
+        for sample in docs[t]:
+            clean_paras = []
+            for para in sample.get_segments():
+                clean_paras.append(normalize_text(para))
             exit()
