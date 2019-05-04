@@ -1,3 +1,4 @@
+import bisect
 import collections
 import glob
 import math
@@ -51,9 +52,11 @@ class TextTiler(object):
             del pseudosents[-1]
 
         ### Group into blocks and calculate sim scores
+        # List[Tuple(sim score, pseudosent index)]
+        # here, the index is of the first PS in block_b
         sims = []
         i = 0
-        while i + 2 * self.k < len(pseudosents):
+        while i + 2 * self.k <= len(pseudosents):
             mid = i + self.k
             end = i + 2 * self.k
             block_a = pseudosents[i:mid]
@@ -66,6 +69,17 @@ class TextTiler(object):
 
             sims.append(self.sim(bow_a, bow_b))
             i += 1
+
+        ### Find boundaries (valleys)
+        bounds = []
+        for j in range(0, len(sims)):
+            if j != 0 and j != len(sims) - 1:
+                if sims[j] < sims[j-1] and sims[j] < sims[j+1]:
+                    bounds.append(j)
+            j += 1
+        bounds = [j + self.k for j in bounds]
+
+        ### Evalute
         exit()
 
     def normalize_text(self, segment):
