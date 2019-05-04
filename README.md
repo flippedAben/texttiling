@@ -33,6 +33,15 @@ anything about it. The data is separated into 4 sections, which are based on
 segment size. Therefore, I will expect to see effects of this decision there
 (e.g. the 9-11 data producing better metric scores compared to the 3-11 data).
 
+On evaluation, should I assume that I know where the paragraph boundaries are?
+For natural data, I would. However, for this synthetic data, I will not because
+it would be too easy to cheat. For the Choi data, each segment is one paragraph,
+so if I knew paragraph boundaries, the task would be trivial. Instead, I assume
+we know where the sentence boundaries are (given in the Choi data set).
+
+What metrics should I use? I chose to use two common metric that I found in
+many academic papers: _P<sub>k</sub>_ and WinDiff.
+
 ## Modification: ELMo
 
 Hearst uses a similarity score to that is essentially bag of words with cosine

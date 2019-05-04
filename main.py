@@ -4,6 +4,7 @@ import glob
 import math
 import nltk
 import os
+import segeval
 import string
 
 # A single sample from the Choi 2000 data
@@ -11,14 +12,22 @@ class Sample(object):
     def __init__(self):
         self.segments = []
 
-    def add_segment(self, p):
-        self.segments.append(p)
+    def add_segment(self, para):
+        self.segments.append(para)
 
     def get_segments(self):
+        # List[List[sentences]]
         return self.segments
 
-    def get_all(self):
-        return ' '.join(self.segments)
+    def get_sent_bound_idxs(self):
+        # return sentence boundary indices for all segments
+        result = []
+        for seg in self.segments:
+            if not result:
+                result.append(len(seg))
+            else:
+                result.append(len(seg) + result[-1])
+        return result
 
 
 # TextTiling algorithm with modifications (not including ELMo)
@@ -27,21 +36,27 @@ class TextTiler(object):
         self.w = w
         self.k = k
 
-    def tile_text(self, sample):
+    def eval_tile_text(self, sample):
+        '''
+        Returns a tuple of metric scores (Pk, WinDiff, B).
+        '''
         ### Record paragraph break points
-        # this list maps segment index to beginning token index
-        pbreaks = [0]
+        # this list maps sentence index to beginning token index
+        sent_bounds = [0]
         normed_text = []
         for seg in sample.get_segments():
-            normed_seg = self.normalize_text(seg)
-            normed_text += normed_seg
-            pbreaks.append(len(normed_seg) + pbreaks[-1])
-        del pbreaks[-1]
+            normed_seg_length = 0
+            for sent in seg:
+                normed_sent = self.normalize_text(sent)
+                normed_seg_length += len(normed_sent)
+                sent_bounds.append(len(normed_sent) + sent_bounds[-1])
+                normed_text += normed_sent
+        del sent_bounds[-1]
 
         ### Break up text into Pseudosentences
         # this list maps pseudosentence index to beginning token index
-        tidx = list(range(0, len(normed_text), self.w))
-        pseudosents = [normed_text[i:i + self.w] for i in tidx]
+        ps_bounds = list(range(0, len(normed_text), self.w))
+        pseudosents = [normed_text[i:i + self.w] for i in ps_bounds]
 
         # discard pseudosents of length < self.w
         # also, record the waste for fun
@@ -71,16 +86,32 @@ class TextTiler(object):
             i += 1
 
         ### Find boundaries (valleys)
-        bounds = []
+        pred = []
         for j in range(0, len(sims)):
             if j != 0 and j != len(sims) - 1:
                 if sims[j] < sims[j-1] and sims[j] < sims[j+1]:
-                    bounds.append(j)
+                    pred.append(j)
             j += 1
-        bounds = [j + self.k for j in bounds]
+        pred = [j + self.k for j in pred]
 
         ### Evalute
-        exit()
+        # map pseudosentence indices to beginning token index
+        pred_btokis = [ps_bounds[i] for i in pred]
+        # map beginning token index to closest sentence index
+        # (this token is closest to the beginning of which sentence?)
+        pred_sentis = [self.btoki_to_senti(t, sent_bounds) for t in pred_btokis]
+        # add last boundary (which we know is always there)
+        pred_sentis += [len(sent_bounds)]
+        gold_sentis = sample.get_sent_bound_idxs()
+
+        pred = self.array_derivative(pred_sentis)
+        gold = self.array_derivative(gold_sentis)
+
+        pk = segeval.pk(pred, gold)
+        wd = segeval.window_diff(pred, gold)
+        bs = segeval.boundary_similarity(pred, gold, one_minus=True)
+
+        return (pk, wd, bs)
 
     def normalize_text(self, segment):
         tokens = nltk.tokenize.word_tokenize(segment)
@@ -108,6 +139,19 @@ class TextTiler(object):
 
         return numerator/denominator
 
+    def btoki_to_senti(self, btoki, sent_bounds):
+        l = bisect.bisect_left(sent_bounds, btoki)
+        h = bisect.bisect_right(sent_bounds, btoki)
+        choose_l = abs(l - btoki) < abs(h - btoki)
+        return l if choose_l else h
+
+    def array_derivative(self, a):
+        result = [a[0]]
+        for i in range(1, len(a)):
+            result.append(a[i] - a[i-1])
+        return result
+
+
 def read_samples(path):
     '''
     Returns a dictionary: types -> List[Sample]
@@ -131,7 +175,7 @@ def read_samples(path):
                     line = line.strip()
                     if line == '==========':
                         if para:
-                            sample.add_segment(' '.join(para))
+                            sample.add_segment(para)
                         para = []
                     else:
                         para.append(line)
@@ -153,6 +197,6 @@ if __name__ == '__main__':
     tt = TextTiler(20, 6)
     for t in samples:
         for s in samples[t]:
-            tiled = tt.tile_text(s)
-            print(tiled)
+            scores = tt.eval_tile_text(s)
+            print(scores)
             exit()
