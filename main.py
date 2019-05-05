@@ -99,15 +99,13 @@ def evaluate(samples, tt, f):
         f.write(' '.join([f'{x:.4f}' for x in mean]))
         f.write('\n')
 
-def evaluate_tt(samples):
-    w = 20
-    k = 3
+def evaluate_tt(samples, w, k):
     tt = texttiler.TextTiler(w, k)
     with open('tt.out', 'w') as f:
         f.write(f'Window size: {w}\nBlock size: {k}\n') 
         evaluate(samples, tt, f)
 
-def evaluate_ett(samples, use_gpu):
+def evaluate_ett(samples, w, k, use_gpu):
     w = 20
     k = 3
     gpu = 0 if use_gpu else -1
@@ -119,6 +117,8 @@ def evaluate_ett(samples, use_gpu):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("w", help="window size", type=int)
+    parser.add_argument("k", help="block size", type=int)
     parser.add_argument("--use_gpu", help="use gpu", action="store_true")
     parser.add_argument("--in_venv", help="using a venv", action="store_true")
     args = parser.parse_args()
@@ -127,5 +127,5 @@ if __name__ == '__main__':
     data_path = '../C99/data/'
     samples = read_samples(data_path)
 
-    evaluate_tt(samples)
-    evaluate_ett(samples, args.use_gpu)
+    evaluate_tt(samples, args.w, args.k)
+    evaluate_ett(samples, args.w, args.k, args.use_gpu)
