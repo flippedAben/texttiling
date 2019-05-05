@@ -106,8 +106,6 @@ def evaluate_tt(samples, w, k):
         evaluate(samples, tt, f)
 
 def evaluate_ett(samples, w, k, use_gpu):
-    w = 20
-    k = 3
     gpu = 0 if use_gpu else -1
     elmo = ElmoEmbedder(cuda_device = gpu)
     ett = texttiler.ELMoTextTiler(w, k, elmo)
