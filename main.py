@@ -87,7 +87,7 @@ def evaluate(samples, tt, f):
                 maxi[i] = max(maxi[i], scores[i])
                 mean[i] += scores[i]/l
             if not count%10:
-                print(f'Progress: {count}/{l}', end='\r')
+                print(f'Progress: {count}/{l}  ', end='\r')
             count += 1
         met = (time.time() - s_time)/l
         f.write(f'Mean evaluation time: {met:.4f} seconds\n')

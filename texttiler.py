@@ -4,8 +4,10 @@ import math
 import nltk
 import segeval
 import string
-import tensorflow as tf
 import numpy as np
+import scipy as sp
+
+import time
 
 class TextTiler(object):
     '''
@@ -34,15 +36,7 @@ class TextTiler(object):
         ### Group into blocks and calculate sim scores
         # List[Tuple(sim score, pseudosent index)]
         # here, the index is of the first PS in block_b
-        sims = []
-        i = 0
-        while i + 2 * self.k <= len(pseudosents):
-            mid = i + self.k
-            end = i + 2 * self.k
-            block_a = pseudosents[i:mid]
-            block_b = pseudosents[mid:end]
-            sims.append(self.sim(block_a, block_b))
-            i += 1
+        sims = self.calculate_sims(pseudosents)
 
         ### Find boundaries (valleys)
         pred = []
@@ -106,21 +100,30 @@ class TextTiler(object):
         result = [w for w in tokens if w not in sw]
         return result
 
-    def sim(self, block_a, block_b):
-        a = [token for ps in block_a for token in ps]
-        b = [token for ps in block_b for token in ps]
-        bow_a = collections.Counter(a)
-        bow_b = collections.Counter(b)
+    def calculate_sims(self, pseudosents):
+        l = len(pseudosents)
+        bows = [collections.Counter(ps) for ps in pseudosents]
+        sims = []
+        i = 0
+        mid = i + self.k
+        end = i + 2*self.k
+        while end <= l:
+            bow_a = sum(bows[i:mid], collections.Counter())
+            bow_b = sum(bows[mid:end], collections.Counter())
 
-        union = bow_a | bow_b
-        prod = [bow_a[tok] * bow_b[tok] for tok in union]
-        numerator = sum(prod)
+            union = bow_a | bow_b
+            prod = [bow_a[tok] * bow_b[tok] for tok in union]
+            numerator = sum(prod)
 
-        sqsum_a = sum([bow_a[tok]**2 for tok in a])
-        sqsum_b = sum([bow_b[tok]**2 for tok in b])
-        denominator = math.sqrt(sqsum_a * sqsum_b)
+            sqsum_a = sum([bow_a[tok]**2 for tok in bow_a])
+            sqsum_b = sum([bow_b[tok]**2 for tok in bow_b])
+            denominator = math.sqrt(sqsum_a * sqsum_b)
+            sims.append(numerator/denominator)
 
-        return numerator/denominator
+            i += 1
+            mid = i + self.k
+            end = i + 2*self.k
+        return sims
 
     def btoki_to_senti(self, btoki, sent_bounds):
         l = bisect.bisect_left(sent_bounds, btoki)
@@ -155,7 +158,6 @@ class ELMoTextTiler(TextTiler):
                 normed_sent = self.discard_stopwords(clean_sent)
                 sent_bounds.append(len(normed_sent) + sent_bounds[-1])
             normed_text += self.get_elmo_embs(clean_seg)
-            print('seg done: ')
         del sent_bounds[-1]
         return sent_bounds, normed_text
 
@@ -172,8 +174,11 @@ class ELMoTextTiler(TextTiler):
             'sequence_len': sent_lens
             }, signature = 'tokens', as_dict=True)['elmo']
 
+        st = time.time()
         # List[List[embeddimgs]]
         seg_emb = self.sess.run(embs)
+        et = time.time() - st
+        print(f'     Time: {et}')
 
         # throw away embeddings of stopwords
         sw = nltk.corpus.stopwords.words('english')
@@ -183,18 +188,29 @@ class ELMoTextTiler(TextTiler):
             for ti in range(0, sent_lens[si]):
                 if in_toks[si][ti] not in sw:
                     tokens.append(seg_emb[si][ti])
-
         # a "token" in the ELMo sense is a big vector
         return tokens
 
-    def sim(self, block_a, block_b):
-        a = np.array([emb for s in block_a for emb in s])
-        b = np.array([emb for s in block_b for emb in s])
+    def calculate_sims(self, pseudosents):
+        l = len(pseudosents)
+        sum_vecs = np.array([np.array(ps).sum(axis=0) for ps in pseudosents])
+        sims = []
+        i = 0
+        mid = i + self.k
+        end = i + 2*self.k
+        block_a = sum_vecs[i:mid].sum(axis=0)
+        block_b = sum_vecs[mid:end].sum(axis=0)
+        max_dist = 0
+        while end <= l:
+            a = block_a/(self.w*self.k)
+            b = block_b/(self.w*self.k)
+            cos_sim = 1 - sp.spatial.distance.cosine(a, b)
+            sims.append(cos_sim)
 
-        # For ELMo, we take the average of both blocks and compute similarity
-        avg_a = self.sess.run(tf.reduce_mean(a, 0))
-        avg_b = self.sess.run(tf.reduce_mean(b, 0))
-        s = tf.losses.cosine_distance(tf.nn.l2_normalize(avg_a, 0),
-                tf.nn.l2_normalize(avg_b, 0), axis=0)
-        cos_sim = 1 - self.sess.run(s)
-        return cos_sim
+            if end < l:
+                block_a = block_a - sum_vecs[i] + sum_vecs[mid]
+                block_b = block_b - sum_vecs[mid] + sum_vecs[end]
+            i += 1
+            mid = i + self.k
+            end = i + 2*self.k
+        return sims
