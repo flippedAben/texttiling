@@ -2,6 +2,21 @@
 
 Final project for NLP class at UT Austin 2019.
 
+## Setup
+
+Clone [this repo](https://github.com/logological/C99.git) into the parent
+directory of this repo. This contains the data.
+
+Setup python venv.
+```
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+When running for the first time, it will be slow because NLTK and Tensorflow
+have to do their setups.
+
 ## Implementation of TextTiling (Hearst 1994)
 
 Although there are already implementations of TextTiling out there
