@@ -62,11 +62,14 @@ def read_samples(path):
                 data[t] = [sample]
     return data
 
-def nltk_init():
+def nltk_init(in_venv):
     # download necessary nltk packages
-    venv_dir = os.getcwd() + '/venv/nltk_data/'
     nltk_data = ['stopwords', 'punkt']
-    nltk.download(nltk_data, download_dir = venv_dir)
+    if in_venv:
+        venv_dir = os.getcwd() + '/venv/nltk_data/'
+        nltk.download(nltk_data, download_dir = venv_dir)
+    else:
+        nltk.download(nltk_data)
 
 def evaluate(samples, tt, f):
     for t in samples:
@@ -117,9 +120,10 @@ def evaluate_ett(samples, use_gpu):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--use_gpu", help="use gpu", action="store_true")
+    parser.add_argument("--in_venv", help="using a venv", action="store_true")
     args = parser.parse_args()
 
-    nltk_init()
+    nltk_init(args.in_venv)
     data_path = '../C99/data/'
     samples = read_samples(data_path)
 
