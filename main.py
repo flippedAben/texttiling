@@ -123,5 +123,5 @@ if __name__ == '__main__':
     data_path = '../C99/data/'
     samples = read_samples(data_path)
 
-    # evaluate_tt(samples)
+    evaluate_tt(samples)
     evaluate_ett(samples, args.use_gpu)
