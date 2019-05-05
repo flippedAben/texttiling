@@ -141,10 +141,9 @@ class ELMoTextTiler(TextTiler):
     '''
     TextTiling algorithm with modifications and ELMo embeddings
     '''
-    def __init__(self, w, k, elmo, sess):
+    def __init__(self, w, k, elmo):
         super().__init__(w,k)
         self.elmo = elmo
-        self.sess = sess
 
     def get_sb_nt(self, sample):
         sent_bounds = [0]
@@ -162,32 +161,16 @@ class ELMoTextTiler(TextTiler):
         return sent_bounds, normed_text
 
     def get_elmo_embs(self, seg_tok):
-        # length in number of tokens
-        sent_lens = [len(sent_tok) for sent_tok in seg_tok]
-        max_sent_len = max(sent_lens)
-        in_toks = []
-        for sent_tok in seg_tok:
-            in_toks.append(sent_tok + [''] * (max_sent_len - len(sent_tok)))
-
-        embs = self.elmo(inputs = {
-            'tokens': in_toks,
-            'sequence_len': sent_lens
-            }, signature = 'tokens', as_dict=True)['elmo']
-
-        st = time.time()
-        # List[List[embeddimgs]]
-        seg_emb = self.sess.run(embs)
-        et = time.time() - st
-        print(f'     Time: {et}')
+        embs = self.elmo.embed_batch(seg_tok)
 
         # throw away embeddings of stopwords
         sw = nltk.corpus.stopwords.words('english')
         sw = set(sw)
         tokens = []
-        for si in range(0, len(in_toks)):
-            for ti in range(0, sent_lens[si]):
-                if in_toks[si][ti] not in sw:
-                    tokens.append(seg_emb[si][ti])
+        for si in range(0, len(seg_tok)):
+            for ti in range(0, len(seg_tok[si])):
+                if seg_tok[si][ti] not in sw:
+                    tokens.append(embs[si][2][ti])
         # a "token" in the ELMo sense is a big vector
         return tokens
 

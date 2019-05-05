@@ -1,11 +1,10 @@
+import argparse
 import glob
 import os
 import nltk
 import texttiler
 import time
-
-import tensorflow as tf
-import tensorflow_hub as hub
+from allennlp.commands.elmo import ElmoEmbedder
 
 # A single sample from the Choi 2000 data
 class Sample(object):
@@ -86,8 +85,7 @@ def evaluate(samples, tt, f):
                 mini[i] = min(mini[i], scores[i])
                 maxi[i] = max(maxi[i], scores[i])
                 mean[i] += scores[i]/l
-            if not count%10:
-                print(f'Progress: {count}/{l}  ', end='\r')
+            print(f'Progress: {count}/{l}  ', end='\r')
             count += 1
         met = (time.time() - s_time)/l
         f.write(f'Mean evaluation time: {met:.4f} seconds\n')
@@ -106,24 +104,24 @@ def evaluate_tt(samples):
         f.write(f'Window size: {w}\nBlock size: {k}\n') 
         evaluate(samples, tt, f)
 
-def evaluate_ett(samples):
+def evaluate_ett(samples, use_gpu):
     w = 20
     k = 3
-    url = 'https://tfhub.dev/google/elmo/2'
-    elmo = hub.Module(url, trainable=False)
-    init = tf.initialize_all_variables()
-    sess = tf.Session()
-    sess.run(init)
-    ett = texttiler.ELMoTextTiler(w, k, elmo, sess)
+    gpu = 0 if use_gpu else -1
+    elmo = ElmoEmbedder(cuda_device = gpu)
+    ett = texttiler.ELMoTextTiler(w, k, elmo)
     with open('ett.out', 'w') as f:
         f.write(f'Window size: {w}\nBlock size: {k}\n')
         evaluate(samples, ett, f)
-    sess.close()
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use_gpu", help="use gpu", action="store_true")
+    args = parser.parse_args()
+
     nltk_init()
     data_path = '../C99/data/'
     samples = read_samples(data_path)
 
-    evaluate_tt(samples)
-    evaluate_ett(samples)
+    # evaluate_tt(samples)
+    evaluate_ett(samples, args.use_gpu)
