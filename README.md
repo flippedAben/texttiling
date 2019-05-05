@@ -39,11 +39,6 @@ it would be too easy to cheat. For the Choi data, each segment is one paragraph,
 so if I knew paragraph boundaries, the task would be trivial. Instead, I assume
 we know where the sentence boundaries are (given in the Choi data set).
 
-What metrics should I use? I chose to use two common metric that I found in
-many academic papers: _P<sub>k</sub>_ and WinDiff. In addition, I found a metric
-that is, in general, stricter than the previous two, which I will also include.
-This metric is called boundary similarity (Fournier 2013).
-
 ## Modification: ELMo
 
 Hearst uses a similarity score to that is essentially bag of words with cosine
@@ -52,13 +47,24 @@ ELMo embeddings. ELMo gives us the contextualized word embeddings (Peters 2018).
 I am not sure if ELMo will better the results here, but it seems to have helped
 everything else it was applied to.
 
+### Design Decisions
+
+How should I encorporate ELMo vectors? The most intuitive way is to normalize
+the text, convert each token into a ELMo vector, and basically do TextTiling
+with a different similarity function. I do not do it this way. For every sample,
+I clean the text (have not yet removed stop words), and get the ELMo vectors per
+segment. Then, I remove the ELMo vectors that correspond to stop words. I do not
+think the ELMo embeddings for stop words might mess with the results a little
+bit if not taken out.
+
 ## Evaluation
 
 ### Metrics
 
-The two metrics used in the literature are _P<sub>k</sub>_ and WinDiff, with
-WinDiff being the harsher metric. I test TextTiling and its
-modifications with these two metrics.
+I use three metrics to evaluate performance of text segmentation. The two
+metrics I've seen most often in the literature are _P<sub>k</sub>_ and WinDiff,
+with WinDiff being harsher. The third metric is newer and harsher than the
+previous two. The metric is called boundary similarity (Fournier 2013).
 
 ### Data
 
@@ -66,5 +72,3 @@ I use the Choi 2000 dataset. I thank __Freddy Choi__ for creating this data and
 GitHub user __logological__ for making it easy to access through this
 [repo](https://github.com/logological/C99.git).
 
-Make sure to clone the above repo into the parent directory this repo.
-The code that reads the data depends on it.

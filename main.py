@@ -3,6 +3,9 @@ import os
 import texttiler
 import time
 
+import tensorflow as tf
+import tensorflow_hub as hub
+
 # A single sample from the Choi 2000 data
 class Sample(object):
     def __init__(self):
@@ -59,15 +62,13 @@ def read_samples(path):
                 data[t] = [sample]
     return data
 
-if __name__ == '__main__':
+def nltk_init():
     # download necessary nltk packages
-    # venv_dir = os.getcwd() + '/venv/nltk_data/'
-    # nltk_data = ['stopwords', 'punkt']
-    # nltk.download(nltk_data, download_dir = venv_dir)
-    data_path = '../C99/data/'
-    samples = read_samples(data_path)
+    venv_dir = os.getcwd() + '/venv/nltk_data/'
+    nltk_data = ['stopwords', 'punkt']
+    nltk.download(nltk_data, download_dir = venv_dir)
 
-    tt = texttiler.TextTiler(20, 6)
+def evaluate(samples, tt):
     for t in samples:
         s_time = time.time()
         l = len(samples[t])
@@ -94,3 +95,30 @@ if __name__ == '__main__':
         print([f'{x:.4f}' for x in mean])
         print()
 
+def evaluate_tt(samples):
+    w = 20
+    k = 6
+    tt = texttiler.TextTiler(w, k)
+    print(f'Window size: {w}\nBlock size: {k}') 
+    evaluate(samples, tt)
+
+def evaluate_ett(samples):
+    w = 20
+    k = 6
+    url = 'https://tfhub.dev/google/elmo/2'
+    elmo = hub.Module(url, trainable=False)
+    init = tf.initialize_all_variables()
+    sess = tf.Session()
+    sess.run(init)
+    ett = texttiler.ELMoTextTiler(w, k, elmo, sess)
+    print(f'Window size: {w}\nBlock size: {k}') 
+    evaluate(samples, ett)
+
+if __name__ == '__main__':
+    # only needs to be run once
+    # nltk_init()
+    data_path = '../C99/data/'
+    samples = read_samples(data_path)
+
+    evaluate_tt(samples)
+    # evaluate_ett(samples)
