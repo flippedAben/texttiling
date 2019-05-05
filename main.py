@@ -1,5 +1,6 @@
 import glob
 import os
+import nltk
 import texttiler
 import time
 
@@ -68,11 +69,11 @@ def nltk_init():
     nltk_data = ['stopwords', 'punkt']
     nltk.download(nltk_data, download_dir = venv_dir)
 
-def evaluate(samples, tt):
+def evaluate(samples, tt, f):
     for t in samples:
         s_time = time.time()
         l = len(samples[t])
-        print(f'{l} samples of type {t}')
+        f.write(f'{l} samples of type {t}\n')
         count = 0
 
         # Tuple(pk, wd, bs)
@@ -89,36 +90,40 @@ def evaluate(samples, tt):
                 print(f'Progress: {count}/{l}', end='\r')
             count += 1
         met = (time.time() - s_time)/l
-        print(f'Mean evaluation time: {met:.4f} seconds')
-        print([f'{x:.4f}' for x in mini])
-        print([f'{x:.4f}' for x in maxi])
-        print([f'{x:.4f}' for x in mean])
-        print()
+        f.write(f'Mean evaluation time: {met:.4f} seconds\n')
+        f.write(' '.join([f'{x:.4f}' for x in mini]))
+        f.write('\n')
+        f.write(' '.join([f'{x:.4f}' for x in maxi]))
+        f.write('\n')
+        f.write(' '.join([f'{x:.4f}' for x in mean]))
+        f.write('\n')
 
 def evaluate_tt(samples):
     w = 20
-    k = 6
+    k = 3
     tt = texttiler.TextTiler(w, k)
-    print(f'Window size: {w}\nBlock size: {k}') 
-    evaluate(samples, tt)
+    with open('tt.out', 'w') as f:
+        f.write(f'Window size: {w}\nBlock size: {k}\n') 
+        evaluate(samples, tt, f)
 
 def evaluate_ett(samples):
     w = 20
-    k = 6
+    k = 3
     url = 'https://tfhub.dev/google/elmo/2'
     elmo = hub.Module(url, trainable=False)
     init = tf.initialize_all_variables()
     sess = tf.Session()
     sess.run(init)
     ett = texttiler.ELMoTextTiler(w, k, elmo, sess)
-    print(f'Window size: {w}\nBlock size: {k}') 
-    evaluate(samples, ett)
+    with open('ett.out', 'w') as f:
+        f.write(f'Window size: {w}\nBlock size: {k}\n')
+        evaluate(samples, ett, f)
+    sess.close()
 
 if __name__ == '__main__':
-    # only needs to be run once
-    # nltk_init()
+    nltk_init()
     data_path = '../C99/data/'
     samples = read_samples(data_path)
 
     evaluate_tt(samples)
-    # evaluate_ett(samples)
+    evaluate_ett(samples)

@@ -4,6 +4,8 @@ import math
 import nltk
 import segeval
 import string
+import tensorflow as tf
+import numpy as np
 
 class TextTiler(object):
     '''
@@ -153,6 +155,7 @@ class ELMoTextTiler(TextTiler):
                 normed_sent = self.discard_stopwords(clean_sent)
                 sent_bounds.append(len(normed_sent) + sent_bounds[-1])
             normed_text += self.get_elmo_embs(clean_seg)
+            print('seg done: ')
         del sent_bounds[-1]
         return sent_bounds, normed_text
 
@@ -176,7 +179,6 @@ class ELMoTextTiler(TextTiler):
         sw = nltk.corpus.stopwords.words('english')
         sw = set(sw)
         tokens = []
-
         for si in range(0, len(in_toks)):
             for ti in range(0, sent_lens[si]):
                 if in_toks[si][ti] not in sw:
@@ -186,4 +188,13 @@ class ELMoTextTiler(TextTiler):
         return tokens
 
     def sim(self, block_a, block_b):
-        print('Not Implemented yet')
+        a = np.array([emb for s in block_a for emb in s])
+        b = np.array([emb for s in block_b for emb in s])
+
+        # For ELMo, we take the average of both blocks and compute similarity
+        avg_a = self.sess.run(tf.reduce_mean(a, 0))
+        avg_b = self.sess.run(tf.reduce_mean(b, 0))
+        s = tf.losses.cosine_distance(tf.nn.l2_normalize(avg_a, 0),
+                tf.nn.l2_normalize(avg_b, 0), axis=0)
+        cos_sim = 1 - self.sess.run(s)
+        return cos_sim
