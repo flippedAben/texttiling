@@ -36,11 +36,7 @@ class TextTiler(object):
         pseudosents = [normed_text[i:i + self.w] for i in ps_bounds]
 
         # discard pseudosents of length < self.w
-        # also, record the waste for fun
-        waste = 0
         if len(pseudosents[-1]) < self.w:
-            waste += len(pseudosents[-1])
-            print(f'Waste so far: {waste} tokens')
             del pseudosents[-1]
 
         ### Group into blocks and calculate sim scores
@@ -84,9 +80,9 @@ class TextTiler(object):
         pred = self.array_derivative(pred_sentis)
         gold = self.array_derivative(gold_sentis)
 
-        pk = segeval.pk(pred, gold)
-        wd = segeval.window_diff(pred, gold)
-        bs = segeval.boundary_similarity(pred, gold, one_minus=True)
+        pk = float(segeval.pk(pred, gold))
+        wd = float(segeval.window_diff(pred, gold))
+        bs = float(segeval.boundary_similarity(pred, gold, one_minus=True))
 
         return (pk, wd, bs)
 

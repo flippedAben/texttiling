@@ -40,7 +40,9 @@ so if I knew paragraph boundaries, the task would be trivial. Instead, I assume
 we know where the sentence boundaries are (given in the Choi data set).
 
 What metrics should I use? I chose to use two common metric that I found in
-many academic papers: _P<sub>k</sub>_ and WinDiff.
+many academic papers: _P<sub>k</sub>_ and WinDiff. In addition, I found a metric
+that is, in general, stricter than the previous two, which I will also include.
+This metric is called boundary similarity (Fournier 2013).
 
 ## Modification: ELMo
 

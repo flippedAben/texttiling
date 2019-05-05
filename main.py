@@ -1,6 +1,7 @@
-import texttiler
 import glob
 import os
+import texttiler
+import time
 
 # A single sample from the Choi 2000 data
 class Sample(object):
@@ -63,12 +64,33 @@ if __name__ == '__main__':
     # venv_dir = os.getcwd() + '/venv/nltk_data/'
     # nltk_data = ['stopwords', 'punkt']
     # nltk.download(nltk_data, download_dir = venv_dir)
-
     data_path = '../C99/data/'
     samples = read_samples(data_path)
+
     tt = texttiler.TextTiler(20, 6)
     for t in samples:
+        s_time = time.time()
+        l = len(samples[t])
+        print(f'{l} samples of type {t}')
+        count = 0
+
+        # Tuple(pk, wd, bs)
+        mini = [1, 1, 1]
+        maxi = [0, 0, 0]
+        mean = [0, 0, 0]
         for s in samples[t]:
             scores = tt.eval_tile_text(s)
-            print(scores)
-            exit()
+            for i in range(0, len(scores)):
+                mini[i] = min(mini[i], scores[i])
+                maxi[i] = max(maxi[i], scores[i])
+                mean[i] += scores[i]/l
+            if not count%10:
+                print(f'Progress: {count}/{l}', end='\r')
+            count += 1
+        met = (time.time() - s_time)/l
+        print(f'Mean evaluation time: {met:.4f} seconds')
+        print([f'{x:.4f}' for x in mini])
+        print([f'{x:.4f}' for x in maxi])
+        print([f'{x:.4f}' for x in mean])
+        print()
+
