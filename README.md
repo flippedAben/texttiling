@@ -20,7 +20,7 @@ have to do their setups.
 ## Implementation of TextTiling (Hearst 1994)
 
 Although there are already implementations of TextTiling out there
-(by NLTK and other indpendents), I do it again in order to understand
+(by NLTK and other independents), I do it again in order to understand
 the algorithm. Also, I experiment with some parts of the algorithm.
 Reynar did some experimentation and found out that using depth scores was not
 as accurate as using the minimum similarity scores on their test corpus (Reynar
@@ -87,3 +87,6 @@ I use the Choi 2000 dataset. I thank __Freddy Choi__ for creating this data and
 GitHub user __logological__ for making it easy to access through this
 [repo](https://github.com/logological/C99.git).
 
+## Results
+
+See the PDF.
